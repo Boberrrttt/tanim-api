@@ -177,3 +177,60 @@ admin_login_example = Body(
     }
 )
 
+# Admin Registration Documentation
+ADMIN_SIGNUP_DOCS = {
+    "summary": "Admin Registration",
+    "description": """
+    Register a new admin account.
+    
+    **Process:**
+    1. Validate input data
+    2. Hash password securely
+    3. Create admin in database
+    4. Generate authentication tokens
+    5. Set refresh token in HTTP-only cookies
+    6. Return admin information
+    
+    **Requirements:**
+    - Username must be unique
+    - Password minimum 8 characters
+    - Admin accounts have elevated privileges
+    """,
+    "responses": {
+        200: {
+            "description": "Admin registration successful",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "message": "Signup successful",
+                        "data": {
+                            "admin_id": "123e4567-e89b-12d3-a456-426614174000",
+                            "username": "admin_user"
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Validation error or signup failed",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "error",
+                        "message": "Username already exists or signup failed"
+                    }
+                }
+            }
+        }
+    }
+}
+
+admin_signup_example = Body(
+    ..., 
+    description="Admin registration data",
+    example={
+        "username": "admin_user",
+        "password": "AdminSecurePass123!"
+    }
+)

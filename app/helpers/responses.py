@@ -21,12 +21,12 @@ def error_response(
     status_code: int = status.HTTP_400_BAD_REQUEST,
     details: Optional[Dict[str, Any]] = None
 ) -> HTTPException:
-    response = {
+    response: dict = {
         "status": "error",
         "message": message
     }
     
-    if details:
+    if details is not None:
         response["details"] = details
     
     return HTTPException(
