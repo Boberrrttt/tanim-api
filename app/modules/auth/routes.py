@@ -7,7 +7,7 @@ from ...docs.auth_docs import (
     ADMIN_LOGIN_DOCS
 )
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 router.post("/login-farmer", **FARMER_LOGIN_DOCS)(login_farmer_controller)
 router.post("/signup-farmer", **FARMER_SIGNUP_DOCS)(signup_farmer_controller)
