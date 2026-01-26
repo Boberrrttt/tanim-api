@@ -4,6 +4,12 @@ from sqlalchemy import text
 from ..auth.helpers import hash_password
 import uuid
 
+async def get_all(db: Session) -> dict:
+    query  = text("""
+        SELECT * from farmer
+     """)
+
+
 async def update_farmer(db: Session, payload: Farmer) -> dict:
     update_fields = []
     params = {"farmer_id": payload.farmer_id}
