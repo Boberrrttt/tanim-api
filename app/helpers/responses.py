@@ -4,6 +4,7 @@ from typing import Any, Optional, Dict
 def success_response(
     message: str = "Operation successful",
     data: Optional[Any] = None,
+    total: Optional[int] = None,
     status_code: int = status.HTTP_200_OK
 ) -> Dict[str, Any]:
     response = {
@@ -13,6 +14,9 @@ def success_response(
     
     if data is not None:
         response["data"] = data
+    
+    if total is not None:
+        response["total"] = total
     
     return response
 
