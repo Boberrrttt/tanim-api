@@ -2,57 +2,97 @@ from .models import Farmer
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from ..auth.helpers import hash_password
+from ...helpers.responses import success_response, error_response
 import uuid
 
-async def get_all(db: Session) -> dict:
-    query  = text("""
-        SELECT * from farmer
-     """)
+async def get_all(db: Session):
+    try:
+        query  = text("""
+            SELECT * from farmer
+         """)
 
+        result = db.execute(query)
+        
+        farmers = []
+        for row in result:
+            farmer = Farmer(
+                farmer_id=row.farmer_id,
+                username=row.username,
+                password=row.password,
+                farm_id=row.farm_id,
+                created_at=row.created_at
+            )
+            farmers.append(farmer.to_dict())
 
-async def update_farmer(db: Session, payload: Farmer) -> dict:
-    update_fields = []
-    params = {"farmer_id": payload.farmer_id}
+        return success_response(
+            message="Farmers retrieved successfully",
+            data=farmers,
+            total=len(farmers)
+        )
+    
+    except Exception:
+        return error_response(
+            message="Failed to retrieve farmers"
+        )
 
-    if payload.username:
-        update_fields.append("username = :username")
-        params["username"] = payload.username
+async def update_farmer(db: Session, payload: Farmer):
+    try:
+        update_fields = []
+        params = {"farmer_id": payload.farmer_id}
 
-    if payload.password:
-        hashed_password = hash_password(payload.password)
-        update_fields.append("password = :password")
-        params["password"] = hashed_password
+        if payload.username:
+            update_fields.append("username = :username")
+            params["username"] = payload.username
 
-    if payload.farm_id:
-        farm_id_uuid = uuid.UUID(payload.farm_id) if isinstance(payload.farm_id, str) else payload.farm_id
-        update_fields.append("farm_id = :farm_id")
-        params["farm_id"] = str(farm_id_uuid)
+        if payload.password:
+            hashed_password = hash_password(payload.password)
+            update_fields.append("password = :password")
+            params["password"] = hashed_password
 
-    if not update_fields:
-        raise ValueError("No fields to update")
+        if payload.farm_id:
+            farm_id_uuid = uuid.UUID(payload.farm_id) if isinstance(payload.farm_id, str) else payload.farm_id
+            update_fields.append("farm_id = :farm_id")
+            params["farm_id"] = str(farm_id_uuid)
 
-    query = text(f"""
-        UPDATE farmer
-        SET {', '.join(update_fields)}
-        WHERE farmer_id = :farmer_id
-        RETURNING farmer_id, username, farm_id, created_at
-    """)
+        if not update_fields:
+            return error_response(
+                message="No fields to update",
+                status_code=400
+            )
 
-    result = db.execute(query, params).mappings().fetchone()
+        query = text(f"""
+            UPDATE farmer
+            SET {', '.join(update_fields)}
+            WHERE farmer_id = :farmer_id
+            RETURNING farmer_id, username, farm_id, created_at
+        """)
 
-    if result is None:
-        return {
-            "status": "error",
-            "error": "DOES_NOT_EXIST"
-        }
+        result = db.execute(query, params).mappings().fetchone()
 
-    db.commit()
+        if result is None:
+            return error_response(
+                message="Farmer not found",
+                status_code=404
+            )
 
-    return {
-        "status": "success",
-        "data": {
-            "farmer_id": str(result["farmer_id"]),
-            "username": result["username"],
-            "farm_id": result["farm_id"]
-        }
-    }
+        db.commit()
+
+        return success_response(
+            message="Farmer updated successfully",
+            data={
+                "farmer_id": str(result["farmer_id"]),
+                "username": result["username"],
+                "farm_id": result["farm_id"]
+            }
+        )
+    
+    except ValueError as e:
+        return error_response(
+            message=str(e),
+            status_code=400
+        )
+    except Exception:
+        db.rollback()
+        return error_response(
+            message="Failed to update farmer"
+        )
