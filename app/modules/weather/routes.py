@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from .controllers import get_today_weather_controller
 from ...docs.weather_docs import GET_TODAY_WEATHER_DOCS
 

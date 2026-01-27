@@ -1,4 +1,3 @@
-from sqlalchemy.orm import Session
 from .services import get_today_weather
 from fastapi import Query
 

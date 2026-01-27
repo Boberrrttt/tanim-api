@@ -1,10 +1,7 @@
 from fastapi import Request, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
 from typing import Optional
-import os
 
-security = HTTPBearer()
+from ..modules.auth.helpers import verify_access_token, verify_refresh_token, generate_access_token
 
 class AuthMiddleware:
     def __init__(self, required_roles: Optional[list] = None):
@@ -24,7 +21,7 @@ class AuthMiddleware:
             )
         
         try:
-            payload = verify_token(access_token)
+            payload = verify_access_token(access_token)
             request.state.user = payload
             return payload
             
@@ -36,7 +33,7 @@ class AuthMiddleware:
                 )
             
             try:
-                refresh_payload = verify_token(refresh_token)
+                refresh_payload = verify_refresh_token(refresh_token)
                 new_access_token = generate_access_token(refresh_payload)
                 
                 request.state.user = refresh_payload

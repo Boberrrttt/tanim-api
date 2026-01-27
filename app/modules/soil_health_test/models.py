@@ -1,6 +1,5 @@
 from typing import Optional
 from datetime import datetime
-import uuid
 
 class SoilHealthTest:
     def __init__(
