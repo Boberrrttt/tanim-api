@@ -52,5 +52,8 @@ app.add_middleware(
     allow_headers=["*"],  
 )
 
-register_routes(app)  
+register_routes(app)
+
+# Vercel serverless handler
+handler = app  
 
