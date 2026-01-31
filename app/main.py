@@ -52,5 +52,7 @@ app.add_middleware(
     allow_headers=["*"],  
 )
 
-register_routes(app)  
-
+@app.on_event("startup")
+async def startup():
+    from .routes import register_routes
+    register_routes(app)

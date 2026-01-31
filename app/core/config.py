@@ -1,17 +1,7 @@
-from dotenv import load_dotenv
 import os
-from datetime import timedelta
 import re
-
-
-load_dotenv()
-
-DATABASE_URL = str(os.getenv("DATABASE_URL"))
-JWT_SECRET = os.getenv("JWT_SECRET")
-JWT_REFRESH = os.getenv("JWT_REFRESH")
-JWT_EXPIRES_IN = os.getenv("JWT_EXPIRES_IN", "1h")
-JWT_REFRESH_EXPIRES_IN = os.getenv("JWT_REFRESH_EXPIRES_IN", "3d")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+from datetime import timedelta
+from functools import lru_cache
 
 def parse_duration(value: str) -> timedelta:
     match = re.match(r"^(\d+)([smhd])$", value)
@@ -28,6 +18,26 @@ def parse_duration(value: str) -> timedelta:
         "d": timedelta(days=amount),
     }[unit]
 
-ACCESS_TOKEN_TTL = parse_duration(JWT_EXPIRES_IN)
-REFRESH_TOKEN_TTL = parse_duration(JWT_REFRESH_EXPIRES_IN)
+@lru_cache
+def get_settings():
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    JWT_SECRET = os.getenv("JWT_SECRET")
+    JWT_REFRESH = os.getenv("JWT_REFRESH")
 
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL is missing")
+
+    if not JWT_SECRET:
+        raise RuntimeError("JWT_SECRET is missing")
+
+    jwt_expires_raw = os.getenv("JWT_EXPIRES_IN", "1h")
+    jwt_refresh_raw = os.getenv("JWT_REFRESH_EXPIRES_IN", "3d")
+
+    return {
+        "DATABASE_URL": DATABASE_URL,
+        "JWT_SECRET": JWT_SECRET,
+        "JWT_REFRESH": JWT_REFRESH,
+        "JWT_ALGORITHM": os.getenv("JWT_ALGORITHM", "HS256"),
+        "ACCESS_TOKEN_TTL": parse_duration(jwt_expires_raw),
+        "REFRESH_TOKEN_TTL": parse_duration(jwt_refresh_raw),
+    }
