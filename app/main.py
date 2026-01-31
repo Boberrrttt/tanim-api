@@ -54,5 +54,4 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    from .routes import register_routes
     register_routes(app)
