@@ -1,13 +1,22 @@
 import joblib
 import os
-import numpy as np
 import pandas as pd
-from typing import List, Any, Dict
+from typing import List, Any
 from ...helpers.responses import success_response, error_response
 
 _model = None
 _label_encoder = None
-_model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "models", "tanim_model.pkl"))
+
+def get_base_dir():
+    if os.environ.get('VERCEL') == '1':
+        return '/var/task'
+    else:
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+_base_dir = get_base_dir()
+_model_path = os.path.join(_base_dir, "app", "models", "tanim_model.pkl")
+_label_encoder_path = os.path.join(_base_dir, "app", "models", "label_encoder.pkl")
+
 
 async def load_model():
     global _model, _label_encoder
@@ -21,12 +30,19 @@ async def load_model():
             else:
                 _model = loaded_data
                 _label_encoder = getattr(_model, 'label_encoder', None)
-            
-            print(f"Model loaded from: {_model_path}")
-            print(f"Label encoder found: {_label_encoder is not None}")
-            return success_response(message="Model loaded successfully")
         else:
             raise FileNotFoundError(f"Model not found at {_model_path}")
+        
+        if _label_encoder is None and os.path.exists(_label_encoder_path):
+            try:
+                _label_encoder = joblib.load(_label_encoder_path)
+                print(f"Label encoder loaded from: {_label_encoder_path}")
+            except Exception as e:
+                print(f"Failed to load separate label encoder: {str(e)}")
+        
+        print(f"Model loaded from: {_model_path}")
+        print(f"Label encoder found: {_label_encoder is not None}")
+        return success_response(message="Model loaded successfully")
     except Exception as e:
         print(f"Error loading model: {str(e)}")
         return error_response(message=f"Failed to load model: {str(e)}")
@@ -67,11 +83,15 @@ async def predict(features: List[Any]):
                 crops = [str(prediction)]
                 probs = [1.0]
             
-            crops = [str(c) for c in crops]
             probs = [float(p) for p in probs]
             
             crop_probs = list(zip(crops, probs))
             top_3 = sorted(crop_probs, key=lambda x: x[1], reverse=True)[:3]
+            
+            all_probs = sorted(crop_probs, key=lambda x: x[1], reverse=True)
+            print("All crop probabilities:")
+            for crop, prob in all_probs:
+                print(f"  {crop}: {prob:.4f}")
             
             if _label_encoder is not None:
                 prediction_name = _label_encoder.inverse_transform([prediction])[0]
