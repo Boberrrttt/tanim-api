@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import register_routes
+import os
+import joblib
 
 app = FastAPI(
     title="Tanim API",
@@ -14,6 +16,7 @@ app = FastAPI(
     - **User Management**: Farmer and admin roles
     - **Security**: Cookie-based token management
     - **Database**: PostgreSQL with Supabase
+    - **ML Predictions**: Crop recommendation system
     
     ### Authentication Flow
     1. Login with `/api/v1/auth/farmer` or `/api/v1/auth/admin`
@@ -52,9 +55,53 @@ app.add_middleware(
     allow_headers=["*"],  
 )
 
+def optimize_model_if_needed():
+    """Check if optimized model exists, create it if not"""
+    try:
+        model_path = os.path.join(os.path.dirname(__file__), "models", "tanim_model.pkl")
+        optimized_path = os.path.join(os.path.dirname(__file__), "models", "tanim_model_optimized.pkl")
+        
+        if os.path.exists(optimized_path):
+            print("✅ Optimized model already exists")
+            return
+        
+        if not os.path.exists(model_path):
+            print("❌ Original model not found")
+            return
+        
+        size_mb = os.path.getsize(model_path) / (1024 * 1024)
+        print(f"📊 Current model size: {size_mb:.2f} MB")
+        
+        if size_mb > 50:
+            print("🔄 Optimizing model for deployment...")
+            
+            model = joblib.load(model_path)
+            joblib.dump(model, optimized_path, compress=9)
+            
+            new_size_mb = os.path.getsize(optimized_path) / (1024 * 1024)
+            reduction = ((size_mb - new_size_mb) / size_mb * 100)
+            
+            print(f"✅ Optimized model size: {new_size_mb:.2f} MB")
+            print(f"📉 Size reduction: {reduction:.1f}%")
+            
+            if new_size_mb < size_mb:
+                os.remove(model_path)
+                print("🗑️  Removed original model (optimized version is smaller)")
+        else:
+            print("✅ Model size is acceptable, no optimization needed")
+            
+    except Exception as e:
+        print(f"❌ Model optimization failed: {str(e)}")
+
 @app.on_event("startup")
 async def startup():
+    print("🚀 Starting Tanim API...")
+    
+    optimize_model_if_needed()
+    
     register_routes(app)
+    
+    print("✅ Tanim API is ready!")
 
 @app.get("/")
 async def root():

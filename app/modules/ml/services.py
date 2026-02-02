@@ -14,8 +14,12 @@ def get_base_dir():
         return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 _base_dir = get_base_dir()
-_model_path = os.path.join(_base_dir, "app", "models", "tanim_model.pkl")
+_model_path_optimized = os.path.join(_base_dir, "app", "models", "tanim_model_optimized.pkl")
+_model_path_original = os.path.join(_base_dir, "app", "models", "tanim_model.pkl")
 _label_encoder_path = os.path.join(_base_dir, "app", "models", "label_encoder.pkl")
+
+# Try to use optimized model first, fallback to original
+_model_path = _model_path_optimized if os.path.exists(_model_path_optimized) else _model_path_original
 
 
 async def load_model():
