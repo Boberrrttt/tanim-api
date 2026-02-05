@@ -2,6 +2,9 @@ import os
 import re
 from datetime import timedelta
 from functools import lru_cache
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def parse_duration(value: str) -> timedelta:
     match = re.match(r"^(\d+)([smhd])$", value)
