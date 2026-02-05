@@ -31,8 +31,13 @@ PREDICT_DOCS = {
             "description": "Prediction successful",
             "content": {
                 "application/json": {
-                    "example": {
-                        "prediction": "Good"
+                    "examples": {
+                        "success": {
+                            "summary": "Successful prediction",
+                            "value": {
+                                "prediction": "Good"
+                            }
+                        }
                     }
                 }
             }
@@ -41,8 +46,13 @@ PREDICT_DOCS = {
             "description": "Invalid input features",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Prediction failed: Invalid feature format"
+                    "examples": {
+                        "error": {
+                            "summary": "Invalid features",
+                            "value": {
+                                "detail": "Prediction failed: Invalid feature format"
+                            }
+                        }
                     }
                 }
             }
@@ -51,8 +61,13 @@ PREDICT_DOCS = {
             "description": "Model not available or prediction failed",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Prediction failed: Model not loaded"
+                    "examples": {
+                        "error": {
+                            "summary": "Model error",
+                            "value": {
+                                "detail": "Prediction failed: Model not loaded"
+                            }
+                        }
                     }
                 }
             }
@@ -63,8 +78,13 @@ PREDICT_DOCS = {
 predict_example = Body(
     ..., 
     description="ML prediction features",
-    example={
-        "features": [45.5, 28.3, 120.7, 6.8, 0.5, 22.5, 65.2]
+    examples={
+        "default": {
+            "summary": "Example features",
+            "value": {
+                "features": [45.5, 28.3, 120.7, 6.8, 0.5, 22.5, 65.2]
+            }
+        }
     }
 )
 
@@ -90,10 +110,15 @@ GET_MODEL_INFO_DOCS = {
             "description": "Model information retrieved successfully",
             "content": {
                 "application/json": {
-                    "example": {
-                        "model_path": "C:/Users/User/Dev/tanim/tanim-api/app/models/tanim_model.pkl",
-                        "is_loaded": True,
-                        "model_type": "RandomForestClassifier"
+                    "examples": {
+                        "success": {
+                            "summary": "Model info",
+                            "value": {
+                                "model_path": "C:/Users/User/Dev/tanim/tanim-api/app/models/tanim_model.pkl",
+                                "is_loaded": True,
+                                "model_type": "RandomForestClassifier"
+                            }
+                        }
                     }
                 }
             }
@@ -102,8 +127,13 @@ GET_MODEL_INFO_DOCS = {
             "description": "Failed to get model information",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Failed to get model info: Model file not found"
+                    "examples": {
+                        "error": {
+                            "summary": "Model info error",
+                            "value": {
+                                "detail": "Failed to get model info: Model file not found"
+                            }
+                        }
                     }
                 }
             }
