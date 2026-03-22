@@ -1,15 +1,19 @@
 import httpx
-from typing import List, Any
+from typing import Any, List, Optional
 from ...helpers.responses import success_response, error_response
 
 ML_SERVICE_URL = "https://tanim-model.onrender.com"
 
-async def predict(features: List[Any]):
+async def predict(features: List[Any], farm_id: Optional[str] = None):
     try:
         async with httpx.AsyncClient() as client:
+            payload: dict = {"features": features}
+            if farm_id:
+                payload["farm_id"] = farm_id
+
             response = await client.post(
                 f"{ML_SERVICE_URL}/predict",
-                json={"features": features},
+                json=payload,
             )
             
             if response.status_code == 200:

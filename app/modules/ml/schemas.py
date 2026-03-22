@@ -3,6 +3,7 @@ from typing import List, Any, Optional
 
 class PredictionRequest(BaseModel):
     features: List[Any] = Field(..., description="Input features for prediction: [N, P, K, ph, temperature, humidity]")
+    farm_id: Optional[str] = Field(None, description="When set, ML service persists a soil health test with this farm_id")
 
 class ProbabilityItem(BaseModel):
     crop_class: str = Field(..., description="Predicted crop class")
