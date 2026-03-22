@@ -58,6 +58,51 @@ CREATE_SOIL_HEALTH_TEST_DOCS = {
     }
 }
 
+# Update today's Soil Health Test (same calendar day, UTC)
+UPDATE_SOIL_HEALTH_TEST_DOCS = {
+    "summary": "Update today's Soil Health Test",
+    "description": """
+    Updates the most recent soil health test for the farm whose `created_at` falls on the current UTC date.
+    Use this when a record for today already exists. Feature fields (NPK, pH, moisture, etc.) and classification are updated; `created_at` is unchanged.
+
+    If the optional `created_at` is sent, its UTC date must be today; otherwise use POST to create a row for another day.
+
+    **Returns 404** when there is no test for today for that `farm_id` — create one with POST.
+    """,
+    "responses": {
+        200: {
+            "description": "Soil health test updated successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "message": "Soil health test updated successfully",
+                        "data": {
+                            "test_id": "550e8400-e29b-41d4-a716-446655440000",
+                            "nitrogen": 45.5,
+                            "phosphorus": 28.3,
+                            "potassium": 120.7,
+                            "ph": 6.8,
+                            "salinity": 0.5,
+                            "temperature": 22.5,
+                            "moisture": 65.2,
+                            "farm_id": "123e4567-e89b-12d3-a456-426614174000",
+                            "classification": "Good",
+                            "created_at": "2024-01-25T14:30:00.000000",
+                        },
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Bad request — e.g. created_at is not today",
+        },
+        404: {
+            "description": "No soil health test for today for this farm",
+        },
+    },
+}
+
 # Get Soil Health Tests by Farm ID Documentation
 GET_SOIL_HEALTH_TESTS_BY_FARM_ID_DOCS = {
     "summary": "Get Soil Health Tests by Farm ID",
