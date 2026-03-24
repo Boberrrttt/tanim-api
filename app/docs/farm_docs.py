@@ -10,18 +10,18 @@ from ..modules.farm.schemas import CreateFarm
 CREATE_FARM_DOCS = {
     "summary": "Create Farm",
     "description": """
-    Create a new farm for a farmer.
+    Create a new farm.
     
     **Process:**
     1. Validate farm data
     2. Create farm record in database
-    3. Update farmer with farm_id reference
+    3. If farmer_id provided, assign farm_id to that farmer
     4. Return farm information
     
     **Requirements:**
-    - farmer_id must exist in database
     - farm_name must be provided
     - farm_measurement must be positive
+    - farmer_id is optional (farm can be created first, linked later)
     - farm_location is optional
     """,
     "responses": {
@@ -65,9 +65,9 @@ create_farm_example = Body(
     ..., 
     description="Farm creation data",
     example={
-        "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
         "farm_name": "Green Valley Farm",
         "farm_measurement": 150,
+        "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
         "farm_location": {
             "latitude": 40.7128,
             "longitude": -74.0060,
@@ -131,6 +131,50 @@ GET_ALL_FARMS_DOCS = {
                     "example": {
                         "status": "error",
                         "message": "Farm retrieval failed"
+                    }
+                }
+            }
+        }
+    }
+}
+
+# Get Farms by Farmer ID Documentation
+GET_FARMS_BY_FARMER_ID_DOCS = {
+    "summary": "Get Farms by Farmer ID",
+    "description": """
+    Retrieve all farms owned by a specific farmer.
+    
+    **Process:**
+    1. Query farm records where farmer_id matches
+    2. Return list of farm objects
+    
+    **Returns:**
+    - List of farms for the given farmer
+    - Empty list if farmer has no farms
+    """,
+    "responses": {
+        200: {
+            "description": "Farms retrieved successfully",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "message": "Farms retrieved successfully",
+                        "data": [
+                            {
+                                "farm_id": "123e4567-e89b-12d3-a456-426614174000",
+                                "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
+                                "farm_name": "Green Valley Farm",
+                                "farm_measurement": 150,
+                                "farm_location": {
+                                    "latitude": 40.7128,
+                                    "longitude": -74.0060,
+                                    "address": "123 Farm Road, Countryside, ST 12345"
+                                },
+                                "created_at": "2024-01-25T10:24:00.000000"
+                            }
+                        ],
+                        "total": 1
                     }
                 }
             }

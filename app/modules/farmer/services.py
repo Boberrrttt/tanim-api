@@ -7,29 +7,31 @@ import uuid
 
 async def get_all(db: Session):
     try:
-        query  = text("""
-            SELECT * from farmer
-         """)
-
+        query = text("""
+            SELECT f.farmer_id, f.username, f.password, f.created_at,
+                   (SELECT farm_id FROM farm WHERE farmer_id = f.farmer_id LIMIT 1) as farm_id
+            FROM farmer f
+        """)
         result = db.execute(query)
-        
+
         farmers = []
         for row in result:
+            farm_id = str(row.farm_id) if row.farm_id else None
             farmer = Farmer(
-                farmer_id=row.farmer_id,
+                farmer_id=str(row.farmer_id),
                 username=row.username,
                 password=row.password,
-                farm_id=row.farm_id,
+                farm_id=farm_id,
                 created_at=row.created_at
             )
-            farmers.append(farmer.to_dict())
+            farmers.append(farmer.to_public_dict())
 
         return success_response(
             message="Farmers retrieved successfully",
             data=farmers,
             total=len(farmers)
         )
-    
+
     except Exception:
         return error_response(
             message="Failed to retrieve farmers"

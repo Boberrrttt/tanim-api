@@ -9,5 +9,6 @@ class FarmerCreate(BaseModel):
 class FarmerRead(BaseModel):
     farmer_id: str
     username: str
-    created_at: Optional[datetime]
+    farm_id: Optional[str] = None
+    created_at: Optional[datetime] = None
 

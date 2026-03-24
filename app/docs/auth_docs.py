@@ -73,14 +73,15 @@ FARMER_SIGNUP_DOCS = {
     1. Validate input data
     2. Hash password securely
     3. Create user in database
-    4. Generate authentication tokens
-    5. Set tokens in cookies
-    6. Return user information
+    4. If farm_id provided, assign farmer_id to that farm
+    5. Generate authentication tokens
+    6. Set tokens in cookies
+    7. Return user information
     
     **Requirements:**
     - Username must be unique
     - Password minimum 8 characters
-    - Email format validation
+    - farm_id is optional (farmer can be created first, linked later)
     """,
     "responses": {
         200: {
@@ -117,7 +118,8 @@ farmer_signup_example = Body(
     description="Farmer registration data",
     example={
         "username": "john_doe",
-        "password": "SecurePass123!"
+        "password": "SecurePass123!",
+        "farm_id": "123e4567-e89b-12d3-a456-426614174000"
     }
 )
 

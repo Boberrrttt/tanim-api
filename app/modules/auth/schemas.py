@@ -1,4 +1,5 @@
-from pydantic import BaseModel 
+from pydantic import BaseModel
+from typing import Optional
 
 class Login(BaseModel): 
     username: str
@@ -11,3 +12,8 @@ class LoginRead(BaseModel):
 class Signup(BaseModel):
     username: str
     password: str
+
+class SignupFarmer(BaseModel):
+    username: str
+    password: str
+    farm_id: Optional[str] = None
