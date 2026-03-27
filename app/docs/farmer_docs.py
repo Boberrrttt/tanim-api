@@ -13,7 +13,7 @@ GET_ALL_FARMERS_DOCS = {
     2. Return list of farmer objects (passwords excluded)
 
     **Returns:**
-    - List of all farmers with farmer_id, username, farm_id, created_at
+    - List of all farmers with farmer_id, username, first_name, last_name, farm_id, created_at
     - Empty list if no farmers exist
     """,
     "responses": {
@@ -28,12 +28,16 @@ GET_ALL_FARMERS_DOCS = {
                             {
                                 "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
                                 "username": "farmer1",
+                                "first_name": "Jane",
+                                "last_name": "Smith",
                                 "farm_id": "123e4567-e89b-12d3-a456-426614174000",
                                 "created_at": "2024-01-25T10:24:00.000000"
                             },
                             {
                                 "farmer_id": "660f9511-f29c-52e5-b827-557766551111",
                                 "username": "farmer2",
+                                "first_name": "Alex",
+                                "last_name": "Nguyen",
                                 "farm_id": None,
                                 "created_at": "2024-01-25T11:30:00.000000"
                             }

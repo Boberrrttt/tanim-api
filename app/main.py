@@ -1,6 +1,37 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .routes import register_routes
+
+# Browsers reject Access-Control-Allow-Origin: * together with credentialed fetches.
+# Starlette only mirrors a concrete Origin when allow_origins is not "*".
+_DEFAULT_CORS_ORIGINS = [
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:8082",
+    "http://127.0.0.1:8082",
+    "http://localhost:19000",
+    "http://127.0.0.1:19000",
+    "http://localhost:19006",
+    "http://127.0.0.1:19006",
+]
+
+# Optional comma-separated list, e.g. CORS_ORIGINS=https://app.example.com,http://localhost:3000
+def _cors_allow_origins() -> list[str]:
+    raw = os.getenv("CORS_ORIGINS", "").strip()
+    if raw:
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    return list(_DEFAULT_CORS_ORIGINS)
+
+
+# Expo (LAN / tunnel) and typical private-network dev hosts when Origin is sent.
+_CORS_ORIGIN_REGEX = (
+    r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+    r"|^https?://192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$"
+    r"|^https?://10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$"
+    r"|^https://[\w.-]+\.exp\.direct(:\d+)?$"
+)
 
 app = FastAPI(
     title="Tanim API",
@@ -46,10 +77,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=_cors_allow_origins(),
+    allow_origin_regex=_CORS_ORIGIN_REGEX,
     allow_credentials=True,
-    allow_methods=["*"],  
-    allow_headers=["*"],  
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.on_event("startup")

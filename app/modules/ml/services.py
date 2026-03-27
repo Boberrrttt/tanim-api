@@ -14,19 +14,27 @@ async def predict(features: List[Any], farm_id: Optional[str] = None):
             response = await client.post(
                 f"{ML_SERVICE_URL}/predict",
                 json=payload,
+                timeout=120.0,
             )
-            
-            if response.status_code == 200:
-                result = response.json()
-                return success_response(
-                    message="Prediction successful",
-                    data=result.get("data", result)
-                )
-            else:
+
+            if response.status_code != 200:
                 return error_response(
                     message=f"ML service error: {response.status_code}",
-                    details={"response": response.text}
+                    details={"response": response.text},
                 )
+
+            result = response.json()
+            if result.get("status") == "error":
+                return error_response(
+                    message=result.get("message", "ML inference failed"),
+                    details=result if isinstance(result, dict) else None,
+                )
+
+            inner = result.get("data", result)
+            return success_response(
+                message="Prediction successful",
+                data=inner,
+            )
                 
     except httpx.TimeoutException:
         return error_response(message="ML service timeout")
@@ -40,19 +48,21 @@ async def get_model_info():
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{ML_SERVICE_URL}/",
+                timeout=30.0,
             )
-            
-            if response.status_code == 200:
-                result = response.json()
-                return success_response(
-                    message="Model info retrieved",
-                    data=result.get("data", result)
-                )
-            else:
+
+            if response.status_code != 200:
                 return error_response(
                     message=f"ML service error: {response.status_code}",
-                    details={"response": response.text}
+                    details={"response": response.text},
                 )
+
+            result = response.json()
+            inner = result.get("data", result)
+            return success_response(
+                message="Model info retrieved",
+                data=inner,
+            )
                 
     except httpx.TimeoutException:
         return error_response(message="ML service timeout")

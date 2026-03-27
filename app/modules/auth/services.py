@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 async def login_farmer(db: Session, payload: Login):
     try:
-        query = text("SELECT farmer_id, username, password FROM farmer WHERE username = :username")
+        query = text(
+            "SELECT farmer_id, username, password, first_name, last_name FROM farmer WHERE username = :username"
+        )
         result = db.execute(
             query,
             {"username": payload.username}
@@ -45,17 +47,23 @@ async def login_farmer(db: Session, payload: Login):
             "username": result["username"]
         })
 
+        first_name = result.get("first_name") or ""
+        last_name = result.get("last_name") or ""
+
         return success_response(
             message="Login successful",
             data={
                 "farmer_id": str(result["farmer_id"]),
                 "username": result["username"],
+                "first_name": first_name,
+                "last_name": last_name,
                 "access_token": access_token,
                 "refresh_token": refresh_token
             }
         )
     
     except Exception:
+        logger.exception("Farmer login failed for username=%r", payload.username)
         return error_response(
             message="Login failed"
         )
@@ -80,26 +88,17 @@ async def signup_farmer(db: Session, payload: SignupFarmer):
 
         hashed_password = hash_password(payload.password)
 
-        if payload.farm_id:
-            query = text("""
-                INSERT INTO farmer (username, password)
-                VALUES (:username, :password)
-                RETURNING farmer_id, username
-            """)
-            params = {
-                "username": payload.username,
-                "password": hashed_password
-            }
-        else:
-            query = text("""
-                INSERT INTO farmer (username, password)
-                VALUES (:username, :password)
-                RETURNING farmer_id, username
-            """)
-            params = {
-                "username": payload.username,
-                "password": hashed_password
-            }
+        query = text("""
+            INSERT INTO farmer (username, password, first_name, last_name)
+            VALUES (:username, :password, :first_name, :last_name)
+            RETURNING farmer_id, username, first_name, last_name
+        """)
+        params = {
+            "username": payload.username,
+            "password": hashed_password,
+            "first_name": payload.first_name,
+            "last_name": payload.last_name,
+        }
 
         result = db.execute(query, params).mappings().fetchone()
 
@@ -139,6 +138,8 @@ async def signup_farmer(db: Session, payload: SignupFarmer):
             data={
                 "farmer_id": farmer_id,
                 "username": result["username"],
+                "first_name": result["first_name"],
+                "last_name": result["last_name"],
                 "access_token": access_token,
                 "refresh_token": refresh_token
             }

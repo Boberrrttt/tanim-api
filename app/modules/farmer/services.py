@@ -8,7 +8,7 @@ import uuid
 async def get_all(db: Session):
     try:
         query = text("""
-            SELECT f.farmer_id, f.username, f.password, f.created_at,
+            SELECT f.farmer_id, f.username, f.password, f.first_name, f.last_name, f.created_at,
                    (SELECT farm_id FROM farm WHERE farmer_id = f.farmer_id LIMIT 1) as farm_id
             FROM farmer f
         """)
@@ -21,6 +21,8 @@ async def get_all(db: Session):
                 farmer_id=str(row.farmer_id),
                 username=row.username,
                 password=row.password,
+                first_name=getattr(row, "first_name", None) or "",
+                last_name=getattr(row, "last_name", None) or "",
                 farm_id=farm_id,
                 created_at=row.created_at
             )
@@ -51,6 +53,14 @@ async def update_farmer(db: Session, payload: Farmer):
             update_fields.append("password = :password")
             params["password"] = hashed_password
 
+        if payload.first_name:
+            update_fields.append("first_name = :first_name")
+            params["first_name"] = payload.first_name
+
+        if payload.last_name:
+            update_fields.append("last_name = :last_name")
+            params["last_name"] = payload.last_name
+
         if payload.farm_id:
             farm_id_uuid = uuid.UUID(payload.farm_id) if isinstance(payload.farm_id, str) else payload.farm_id
             update_fields.append("farm_id = :farm_id")
@@ -66,7 +76,7 @@ async def update_farmer(db: Session, payload: Farmer):
             UPDATE farmer
             SET {', '.join(update_fields)}
             WHERE farmer_id = :farmer_id
-            RETURNING farmer_id, username, farm_id, created_at
+            RETURNING farmer_id, username, first_name, last_name, farm_id, created_at
         """)
 
         result = db.execute(query, params).mappings().fetchone()
@@ -84,6 +94,8 @@ async def update_farmer(db: Session, payload: Farmer):
             data={
                 "farmer_id": str(result["farmer_id"]),
                 "username": result["username"],
+                "first_name": result["first_name"],
+                "last_name": result["last_name"],
                 "farm_id": result["farm_id"]
             }
         )

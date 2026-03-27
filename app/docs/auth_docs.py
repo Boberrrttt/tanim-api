@@ -34,7 +34,9 @@ FARMER_LOGIN_DOCS = {
                         "message": "Login successful",
                         "data": {
                             "farmer_id": "123e4567-e89b-12d3-a456-426614174000",
-                            "username": "john_doe"
+                            "username": "john_doe",
+                            "first_name": "John",
+                            "last_name": "Doe"
                         }
                     }
                 }
@@ -93,7 +95,9 @@ FARMER_SIGNUP_DOCS = {
                         "message": "Farmer created successfully",
                         "data": {
                             "farmer_id": "123e4567-e89b-12d3-a456-426614174000",
-                            "username": "john_doe"
+                            "username": "john_doe",
+                            "first_name": "John",
+                            "last_name": "Doe"
                         }
                     }
                 }
@@ -119,6 +123,8 @@ farmer_signup_example = Body(
     example={
         "username": "john_doe",
         "password": "SecurePass123!",
+        "first_name": "John",
+        "last_name": "Doe",
         "farm_id": "123e4567-e89b-12d3-a456-426614174000"
     }
 )

@@ -7,6 +7,8 @@ class Farmer:
         self,
         username: str,
         password: str,
+        first_name: str = "",
+        last_name: str = "",
         farmer_id: Optional[str] = None,
         farm_id: Optional[str] = None,
         created_at: Optional[datetime] = None
@@ -14,6 +16,8 @@ class Farmer:
         self.farmer_id = farmer_id or str(uuid.uuid4()) 
         self.username = username
         self.password = password
+        self.first_name = first_name
+        self.last_name = last_name
         self.farm_id = farm_id
         self.created_at = created_at or datetime.utcnow()
 
@@ -22,6 +26,8 @@ class Farmer:
             "farmer_id": self.farmer_id,
             "username": self.username,
             "password": self.password,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
             "farm_id": self.farm_id,
             "created_at": self.created_at.isoformat()
         }
@@ -31,6 +37,8 @@ class Farmer:
         return {
             "farmer_id": str(self.farmer_id),
             "username": self.username,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
             "farm_id": self.farm_id,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
