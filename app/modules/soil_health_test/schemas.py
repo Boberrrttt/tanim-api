@@ -13,7 +13,6 @@ class CreateSoilHealthTest(BaseModel):
     temperature: float
     moisture: float
     farm_id: str
-    classification: str
     created_at: Optional[datetime] = None
 
 
@@ -26,5 +25,4 @@ class UpdateSoilHealthTest(BaseModel):
     temperature: float
     moisture: float
     farm_id: str
-    classification: str
     created_at: Optional[datetime] = None

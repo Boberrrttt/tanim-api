@@ -12,8 +12,8 @@ class SoilHealthTest:
         temperature: float,
         moisture: float,
         farm_id: str,
-        classification: str,
-        created_at: Optional[datetime] = None
+        created_at: Optional[datetime] = None,
+        updated_at: Optional[datetime] = None,
     ):
         self.nitrogen = nitrogen,
         self.phosphorus = phosphorus,
@@ -22,9 +22,9 @@ class SoilHealthTest:
         self.salinity = salinity,
         self.temperature = temperature,
         self.moisture = moisture,
-        self.farm_id = farm_id,
-        self.classification = classification,
+        self.farm_id = farm_id
         self.created_at = created_at or datetime.utcnow()
+        self.updated_at = updated_at
 
     def to_dict(self):
         return {
@@ -36,7 +36,7 @@ class SoilHealthTest:
             "temperature": self.temperature,
             "moisture": self.moisture,
             "farm_id": self.farm_id,
-            "classification": self.classification,
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 

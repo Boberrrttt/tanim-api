@@ -3,6 +3,7 @@ import uuid
 
 from fastapi import HTTPException
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.soil_health_test.models import SoilHealthTest
@@ -22,6 +23,9 @@ def _as_utc(dt: datetime) -> datetime:
 
 async def create(db: Session, soil_health_test: CreateSoilHealthTest):
     try:
+        print(
+            f"[soil_health_test] POST /api/v1/test/ create farm_id={soil_health_test.farm_id!r}"
+        )
         created_at = soil_health_test.created_at or datetime.now(timezone.utc)
         created_at = _as_utc(created_at)
         day = created_at.date()
@@ -49,15 +53,15 @@ async def create(db: Session, soil_health_test: CreateSoilHealthTest):
             temperature=soil_health_test.temperature,
             moisture=soil_health_test.moisture,
             farm_id=soil_health_test.farm_id,
-            classification=soil_health_test.classification,
             created_at=created_at,
+            updated_at=created_at,
         )
 
         test_id = str(uuid.uuid4())
 
         query = text("""
-            INSERT INTO soil_health_test (test_id, farm_id, nitrogen, phosphorus, potassium, ph, salinity, temperature, moisture, classification, created_at)
-            VALUES (:test_id, :farm_id, :nitrogen, :phosphorus, :potassium, :ph, :salinity, :temperature, :moisture, :classification, :created_at)
+            INSERT INTO soil_health_test (test_id, farm_id, nitrogen, phosphorus, potassium, ph, salinity, temperature, moisture, created_at, updated_at)
+            VALUES (:test_id, :farm_id, :nitrogen, :phosphorus, :potassium, :ph, :salinity, :temperature, :moisture, :created_at, :updated_at)
         """)
 
         result = db.execute(query, {
@@ -70,13 +74,17 @@ async def create(db: Session, soil_health_test: CreateSoilHealthTest):
             'salinity': soil_health_test.salinity,
             'temperature': soil_health_test.temperature,
             'moisture': soil_health_test.moisture,
-            'classification': soil_health_test.classification,
             'created_at': created_at.isoformat(),
+            'updated_at': created_at.isoformat(),
         })
         
         if result.rowcount == 0:
             db.rollback()
-            return error_response(
+            print(
+                f"[soil_health_test] POST /api/v1/test/ create failed farm_id={soil_health_test.farm_id!r} "
+                "reason=no_rows_inserted"
+            )
+            raise error_response(
                 message="Failed to create soil health test - no rows affected"
             )
         
@@ -90,19 +98,44 @@ async def create(db: Session, soil_health_test: CreateSoilHealthTest):
             data=test_data
         )
 
-    except HTTPException:
+    except HTTPException as exc:
         db.rollback()
+        print(
+            f"[soil_health_test] POST /api/v1/test/ create rejected farm_id={soil_health_test.farm_id!r} "
+            f"status={exc.status_code} detail={exc.detail!r}"
+        )
         raise
+    except IntegrityError as e:
+        db.rollback()
+        orig = str(e.orig) if getattr(e, "orig", None) else str(e)
+        print(
+            f"[soil_health_test] POST /api/v1/test/ create integrity_error farm_id={soil_health_test.farm_id!r} "
+            f"db_message={orig!r}"
+        )
+        if "farm_id" in orig and "farm" in orig.lower():
+            raise error_response(
+                message="Invalid farm_id: that farm does not exist in the database.",
+                status_code=400,
+                details={"database": orig},
+            )
+        raise error_response(
+            message="Could not save soil health test (database constraint).",
+            status_code=400,
+            details={"database": orig},
+        )
     except Exception as e:
         db.rollback()
-        print(f"Error creating soil health test: {str(e)}")
-        return error_response(
+        print(
+            f"[soil_health_test] POST /api/v1/test/ create failed farm_id={soil_health_test.farm_id!r}: {e!r}"
+        )
+        raise error_response(
             message=f"Failed to create soil health test: {str(e)}"
         )
 
 
 async def update_today(db: Session, payload: UpdateSoilHealthTest):
     try:
+        print(f"[soil_health_test] PUT /api/v1/test/ update_today farm_id={payload.farm_id!r}")
         today = _utc_today_date()
         if payload.created_at is not None:
             ref = _as_utc(payload.created_at)
@@ -111,6 +144,8 @@ async def update_today(db: Session, payload: UpdateSoilHealthTest):
                     message="PUT only updates today's record for the farm; when created_at is not today, use POST to create a new row.",
                     status_code=400,
                 )
+
+        updated_at = datetime.now(timezone.utc)
 
         query = text("""
             UPDATE soil_health_test
@@ -121,7 +156,7 @@ async def update_today(db: Session, payload: UpdateSoilHealthTest):
                 salinity = :salinity,
                 temperature = :temperature,
                 moisture = :moisture,
-                classification = :classification
+                updated_at = :updated_at
             WHERE test_id = (
                 SELECT test_id FROM soil_health_test
                 WHERE farm_id = :farm_id
@@ -129,7 +164,7 @@ async def update_today(db: Session, payload: UpdateSoilHealthTest):
                 ORDER BY created_at DESC
                 LIMIT 1
             )
-            RETURNING test_id, farm_id, nitrogen, phosphorus, potassium, ph, salinity, temperature, moisture, classification, created_at
+            RETURNING test_id, farm_id, nitrogen, phosphorus, potassium, ph, salinity, temperature, moisture, created_at, updated_at
         """)
 
         row = db.execute(query, {
@@ -142,11 +177,15 @@ async def update_today(db: Session, payload: UpdateSoilHealthTest):
             "salinity": payload.salinity,
             "temperature": payload.temperature,
             "moisture": payload.moisture,
-            "classification": payload.classification,
+            "updated_at": updated_at.isoformat(),
         }).fetchone()
 
         if row is None:
             db.rollback()
+            print(
+                f"[soil_health_test] PUT /api/v1/test/ no_row_for_today farm_id={payload.farm_id!r} "
+                f"utc_date={today.isoformat()!r}"
+            )
             raise error_response(
                 message="No soil health test found for today for this farm; use POST to create one.",
                 status_code=404,
@@ -163,8 +202,8 @@ async def update_today(db: Session, payload: UpdateSoilHealthTest):
             temperature=row.temperature,
             moisture=row.moisture,
             farm_id=row.farm_id,
-            classification=row.classification,
             created_at=row.created_at,
+            updated_at=row.updated_at,
         )
         test_data = test.to_dict()
         test_data["test_id"] = row.test_id
@@ -174,19 +213,36 @@ async def update_today(db: Session, payload: UpdateSoilHealthTest):
             data=test_data,
         )
 
-    except HTTPException:
+    except HTTPException as exc:
         db.rollback()
+        print(
+            f"[soil_health_test] PUT /api/v1/test/ update rejected farm_id={payload.farm_id!r} "
+            f"status={exc.status_code} detail={exc.detail!r}"
+        )
         raise
+    except IntegrityError as e:
+        db.rollback()
+        orig = str(e.orig) if getattr(e, "orig", None) else str(e)
+        print(
+            f"[soil_health_test] PUT /api/v1/test/ integrity_error farm_id={payload.farm_id!r} "
+            f"db_message={orig!r}"
+        )
+        raise error_response(
+            message="Could not update soil health test (database constraint).",
+            status_code=400,
+            details={"database": orig},
+        )
     except Exception as e:
         db.rollback()
-        print(f"Error updating soil health test: {str(e)}")
-        return error_response(
+        print(f"[soil_health_test] PUT /api/v1/test/ update failed farm_id={payload.farm_id!r}: {e!r}")
+        raise error_response(
             message=f"Failed to update soil health test: {str(e)}"
         )
 
 
 async def get_by_farm_id(db: Session, farm_id: str):
     try:
+        print(f"[soil_health_test] GET /api/v1/test/{{farm_id}} farm_id={farm_id!r}")
         query = text("""
             SELECT * FROM soil_health_test 
             WHERE farm_id = :farm_id 
@@ -212,8 +268,8 @@ async def get_by_farm_id(db: Session, farm_id: str):
                 temperature=row.temperature,
                 moisture=row.moisture,
                 farm_id=row.farm_id,
-                classification=row.classification,
-                created_at=row.created_at
+                created_at=row.created_at,
+                updated_at=getattr(row, "updated_at", None),
             )
             test_data = test.to_dict()
             test_data['test_id'] = row.test_id
@@ -225,7 +281,7 @@ async def get_by_farm_id(db: Session, farm_id: str):
         )
     
     except Exception as e:
-        print(f"Error retrieving soil health tests: {str(e)}")
-        return error_response(
+        print(f"[soil_health_test] GET /api/v1/test/{{farm_id}} failed farm_id={farm_id!r}: {e!r}")
+        raise error_response(
             message=f"Failed to retrieve soil health tests: {str(e)}"
         )

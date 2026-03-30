@@ -13,11 +13,10 @@ CREATE_SOIL_HEALTH_TEST_DOCS = {
     **Required Fields:**
     - All soil health metrics (nitrogen, phosphorus, potassium, pH, etc.)
     - Farm ID to link the test to a specific farm
-    - Classification of the soil health test
     
     **Returns:**
     - Created soil health test data with unique ID
-    - Timestamp of creation
+    - Timestamps: `created_at` and `updated_at` (both set to creation time on insert)
     """,
     "responses": {
         200: {
@@ -37,8 +36,8 @@ CREATE_SOIL_HEALTH_TEST_DOCS = {
                             "temperature": 22.5,
                             "moisture": 65.2,
                             "farm_id": "123e4567-e89b-12d3-a456-426614174000",
-                            "classification": "Good",
-                            "created_at": "2024-01-25T14:30:00.000000"
+                            "created_at": "2024-01-25T14:30:00.000000",
+                            "updated_at": "2024-01-25T14:30:00.000000"
                         }
                     }
                 }
@@ -63,7 +62,7 @@ UPDATE_SOIL_HEALTH_TEST_DOCS = {
     "summary": "Update today's Soil Health Test",
     "description": """
     Updates the most recent soil health test for the farm whose `created_at` falls on the current UTC date.
-    Use this when a record for today already exists. Feature fields (NPK, pH, moisture, etc.) and classification are updated; `created_at` is unchanged.
+    Use this when a record for today already exists. Feature fields (NPK, pH, moisture, etc.) are updated; `created_at` is unchanged. `updated_at` is set to the current UTC time.
 
     If the optional `created_at` is sent, its UTC date must be today; otherwise use POST to create a row for another day.
 
@@ -87,8 +86,8 @@ UPDATE_SOIL_HEALTH_TEST_DOCS = {
                             "temperature": 22.5,
                             "moisture": 65.2,
                             "farm_id": "123e4567-e89b-12d3-a456-426614174000",
-                            "classification": "Good",
                             "created_at": "2024-01-25T14:30:00.000000",
+                            "updated_at": "2024-01-25T16:45:00.000000",
                         },
                     }
                 }
@@ -141,8 +140,8 @@ GET_SOIL_HEALTH_TESTS_BY_FARM_ID_DOCS = {
                                 "temperature": 22.5,
                                 "moisture": 65.2,
                                 "farm_id": "123e4567-e89b-12d3-a456-426614174000",
-                                "classification": "Good",
-                                "created_at": "2024-01-25T14:30:00.000000"
+                                "created_at": "2024-01-25T14:30:00.000000",
+                                "updated_at": "2024-01-25T14:30:00.000000"
                             },
                             {
                                 "test_id": "661f9511-f29c-52e5-b827-557766551111",
@@ -154,8 +153,8 @@ GET_SOIL_HEALTH_TESTS_BY_FARM_ID_DOCS = {
                                 "temperature": 21.8,
                                 "moisture": 63.1,
                                 "farm_id": "123e4567-e89b-12d3-a456-426614174000",
-                                "classification": "Fair",
-                                "created_at": "2024-01-24T10:15:00.000000"
+                                "created_at": "2024-01-24T10:15:00.000000",
+                                "updated_at": "2024-01-24T10:15:00.000000"
                             }
                         ],
                         "total": 2
