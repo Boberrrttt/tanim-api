@@ -1,5 +1,6 @@
 import logging
 import json
+from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.modules.farm.schemas import CreateFarm
@@ -9,6 +10,62 @@ from ...helpers.responses import success_response, error_response
 logger = logging.getLogger(__name__)
 
 
+def _farm_location_from_db(raw) -> Optional[str]:
+    """Normalize DB value: plain address string, or legacy JSON with an `address` field."""
+    if raw is None:
+        return None
+    text = raw.strip() if isinstance(raw, str) else str(raw).strip()
+    if not text:
+        return None
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return text
+    if isinstance(parsed, dict):
+        addr = parsed.get("address")
+        if addr is not None and str(addr).strip():
+            return str(addr).strip()
+        return None
+    if isinstance(parsed, str) and parsed.strip():
+        return parsed.strip()
+    return None
+
+
+def _float_or_none(val) -> Optional[float]:
+    if val is None:
+        return None
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _legacy_lat_lng_from_raw(raw) -> tuple[Optional[float], Optional[float]]:
+    """If farm_location still holds legacy JSON with coordinates, extract them."""
+    if raw is None:
+        return None, None
+    text = raw.strip() if isinstance(raw, str) else str(raw).strip()
+    if not text or not text.startswith("{"):
+        return None, None
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return None, None
+    if not isinstance(parsed, dict):
+        return None, None
+    lat = _float_or_none(parsed.get("latitude", parsed.get("lat")))
+    lng = _float_or_none(parsed.get("longitude", parsed.get("lng")))
+    return lat, lng
+
+
+def _lat_lng_from_row(row) -> tuple[Optional[float], Optional[float]]:
+    lat = _float_or_none(getattr(row, "latitude", None))
+    lng = _float_or_none(getattr(row, "longitude", None))
+    if lat is not None and lng is not None:
+        return lat, lng
+    return _legacy_lat_lng_from_raw(getattr(row, "farm_location", None))
+
+
 async def create(db: Session, payload: CreateFarm):
     try:
         logger.info(
@@ -16,23 +73,37 @@ async def create(db: Session, payload: CreateFarm):
             payload.farm_name,
             payload.farmer_id,
         )
+        loc = None
+        if payload.farm_location:
+            s = payload.farm_location.strip()
+            loc = s or None
         farm = Farm(
             farm_name=payload.farm_name,
             farm_measurement=payload.farm_measurement,
-            farm_location=payload.farm_location,
+            farm_location=loc,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
             farmer_id=payload.farmer_id
         )
 
         query = text("""
-            INSERT INTO farm (farm_id, farm_name, farmer_id, farm_measurement, farm_location, created_at)
-            VALUES (:farm_id, :farm_name, :farmer_id, :farm_measurement, :farm_location, :created_at)
+            INSERT INTO farm (
+                farm_id, farm_name, farmer_id, farm_measurement, farm_location,
+                latitude, longitude, created_at
+            )
+            VALUES (
+                :farm_id, :farm_name, :farmer_id, :farm_measurement, :farm_location,
+                :latitude, :longitude, :created_at
+            )
         """)
         db.execute(query, {
             'farm_id': farm.farm_id,
             'farm_name': farm.farm_name,
             'farmer_id': payload.farmer_id,
             'farm_measurement': farm.farm_measurement,
-            'farm_location': json.dumps(farm.farm_location) if farm.farm_location else None,
+            'farm_location': farm.farm_location,
+            'latitude': farm.latitude,
+            'longitude': farm.longitude,
             'created_at': farm.created_at.isoformat()
         })
 
@@ -73,19 +144,17 @@ async def get_all(db: Session):
         
         farms = []
         for row in result:
-            farm_location = None
-            if row.farm_location:
-                try:
-                    farm_location = json.loads(row.farm_location)
-                except:
-                    farm_location = row.farm_location
-            
+            farm_location = _farm_location_from_db(row.farm_location)
+            lat, lng = _lat_lng_from_row(row)
+
             farmer_id = getattr(row, "farmer_id", None)
             farm = Farm(
                 farm_id=row.farm_id,
                 farm_name=row.farm_name,
                 farm_measurement=row.farm_measurement,
                 farm_location=farm_location,
+                latitude=lat,
+                longitude=lng,
                 farmer_id=str(farmer_id) if farmer_id else None,
                 created_at=row.created_at
             )
@@ -113,12 +182,8 @@ async def get_by_farmer_id(db: Session, farmer_id: str):
 
         farms = []
         for row in result:
-            farm_location = None
-            if row.farm_location:
-                try:
-                    farm_location = json.loads(row.farm_location)
-                except Exception:
-                    farm_location = row.farm_location
+            farm_location = _farm_location_from_db(row.farm_location)
+            lat, lng = _lat_lng_from_row(row)
 
             farmer_id_val = getattr(row, "farmer_id", None)
             farm = Farm(
@@ -126,6 +191,8 @@ async def get_by_farmer_id(db: Session, farmer_id: str):
                 farm_name=row.farm_name,
                 farm_measurement=row.farm_measurement,
                 farm_location=farm_location,
+                latitude=lat,
+                longitude=lng,
                 farmer_id=str(farmer_id_val) if farmer_id_val else None,
                 created_at=row.created_at
             )

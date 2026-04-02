@@ -22,7 +22,8 @@ CREATE_FARM_DOCS = {
     - farm_name must be provided
     - farm_measurement must be positive
     - farmer_id is optional (farm can be created first, linked later)
-    - farm_location is optional
+    - farm_location is optional (street address as a plain string)
+    - latitude and longitude are optional (WGS84); omit both if unknown
     """,
     "responses": {
         200: {
@@ -36,11 +37,9 @@ CREATE_FARM_DOCS = {
                             "farm_id": "123e4567-e89b-12d3-a456-426614174000",
                             "farm_name": "Green Valley Farm",
                             "farm_measurement": 150,
-                            "farm_location": {
-                                "latitude": 40.7128,
-                                "longitude": -74.0060,
-                                "address": "123 Farm Road, Countryside, ST 12345"
-                            },
+                            "farm_location": "123 Farm Road, Countryside, ST 12345",
+                            "latitude": 40.7128,
+                            "longitude": -74.006,
                             "created_at": "2024-01-25T10:24:00.000000"
                         }
                     }
@@ -68,11 +67,9 @@ create_farm_example = Body(
         "farm_name": "Green Valley Farm",
         "farm_measurement": 150,
         "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
-        "farm_location": {
-            "latitude": 40.7128,
-            "longitude": -74.0060,
-            "address": "123 Farm Road, Countryside, ST 12345"
-        }
+        "farm_location": "123 Farm Road, Countryside, ST 12345",
+        "latitude": 40.7128,
+        "longitude": -74.006
     }
 )
 
@@ -104,11 +101,9 @@ GET_ALL_FARMS_DOCS = {
                                 "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
                                 "farm_name": "Green Valley Farm",
                                 "farm_measurement": 150,
-                                "farm_location": {
-                                    "latitude": 40.7128,
-                                    "longitude": -74.0060,
-                                    "address": "123 Farm Road, Countryside, ST 12345"
-                                },
+                                "farm_location": "123 Farm Road, Countryside, ST 12345",
+                                "latitude": 40.7128,
+                                "longitude": -74.006,
                                 "created_at": "2024-01-25T10:24:00.000000"
                             },
                             {
@@ -117,6 +112,8 @@ GET_ALL_FARMS_DOCS = {
                                 "farm_name": "Sunshine Acres",
                                 "farm_measurement": 75,
                                 "farm_location": None,
+                                "latitude": None,
+                                "longitude": None,
                                 "created_at": "2024-01-25T11:30:00.000000"
                             }
                         ]
@@ -166,11 +163,9 @@ GET_FARMS_BY_FARMER_ID_DOCS = {
                                 "farmer_id": "550e8400-e29b-41d4-a716-446655440000",
                                 "farm_name": "Green Valley Farm",
                                 "farm_measurement": 150,
-                                "farm_location": {
-                                    "latitude": 40.7128,
-                                    "longitude": -74.0060,
-                                    "address": "123 Farm Road, Countryside, ST 12345"
-                                },
+                                "farm_location": "123 Farm Road, Countryside, ST 12345",
+                                "latitude": 8.425715,
+                                "longitude": 124.818874,
                                 "created_at": "2024-01-25T10:24:00.000000"
                             }
                         ],
