@@ -15,13 +15,13 @@ class SoilHealthTest:
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
     ):
-        self.nitrogen = nitrogen,
-        self.phosphorus = phosphorus,
-        self.potassium = potassium,
-        self.ph = ph,
-        self.salinity = salinity,
-        self.temperature = temperature,
-        self.moisture = moisture,
+        self.nitrogen = nitrogen
+        self.phosphorus = phosphorus
+        self.potassium = potassium
+        self.ph = ph
+        self.salinity = salinity
+        self.temperature = temperature
+        self.moisture = moisture
         self.farm_id = farm_id
         self.created_at = created_at or datetime.utcnow()
         self.updated_at = updated_at

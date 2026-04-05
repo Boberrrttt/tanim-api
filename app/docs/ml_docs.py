@@ -4,7 +4,6 @@ Separate file for Swagger documentation definitions
 """
 
 from fastapi import Body
-from ..modules.ml.schemas import PredictionRequest
 
 # Prediction Documentation
 PREDICT_DOCS = {
@@ -86,6 +85,55 @@ predict_example = Body(
             }
         }
     }
+)
+
+FERTILIZER_PREDICT_DOCS = {
+    "summary": "Fertilizer recommendation (ML)",
+    "description": (
+        "Proxies to the inference service `POST /predict/fertilizer` with soil NPK, pH, "
+        "temperature, EC, and moisture."
+    ),
+    "responses": {
+        200: {
+            "description": "Fertilizer prediction successful",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "message": "Fertilizer recommendation successful",
+                        "data": {
+                            "prediction": "Urea",
+                            "probabilities": [
+                                {
+                                    "fertilizer_class": "Urea",
+                                    "probability": 0.42,
+                                }
+                            ],
+                        },
+                    }
+                }
+            },
+        }
+    },
+}
+
+fertilizer_predict_example = Body(
+    ...,
+    description="Soil readings for fertilizer model",
+    examples={
+        "default": {
+            "summary": "Example soil sample",
+            "value": {
+                "nitrogen": 45.0,
+                "phosphorus": 30.0,
+                "potassium": 120.0,
+                "ph": 6.5,
+                "temperature": 28.0,
+                "ec": 1.2,
+                "moisture": 35.0,
+            },
+        }
+    },
 )
 
 # Get Model Info Documentation
