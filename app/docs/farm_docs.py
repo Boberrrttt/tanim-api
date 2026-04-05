@@ -135,6 +135,40 @@ GET_ALL_FARMS_DOCS = {
     }
 }
 
+PATCH_FARM_LOCATION_DOCS = {
+    "summary": "Update farm coordinates",
+    "description": "Set `latitude` and `longitude` (WGS84) for an existing farm by `farm_id`.",
+    "responses": {
+        200: {
+            "description": "Coordinates updated",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "success",
+                        "message": "Farm location updated successfully",
+                        "data": {
+                            "farm_id": "123e4567-e89b-12d3-a456-426614174000",
+                            "latitude": 8.425715,
+                            "longitude": 124.818874,
+                        },
+                    }
+                }
+            },
+        },
+        401: {
+            "description": "Update failed",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "error",
+                        "message": "Farm not found",
+                    }
+                }
+            },
+        },
+    },
+}
+
 # Get Farms by Farmer ID Documentation
 GET_FARMS_BY_FARMER_ID_DOCS = {
     "summary": "Get Farms by Farmer ID",

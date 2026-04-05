@@ -3,7 +3,7 @@ import json
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.modules.farm.schemas import CreateFarm
+from app.modules.farm.schemas import CreateFarm, UpdateFarmLocation
 from app.modules.farm.models import Farm
 from ...helpers.responses import success_response, error_response
 
@@ -208,3 +208,37 @@ async def get_by_farmer_id(db: Session, farmer_id: str):
         return error_response(
             message="Farm retrieval failed"
         )
+
+
+async def update_location(db: Session, payload: UpdateFarmLocation):
+    try:
+        query = text("""
+            UPDATE farm
+            SET latitude = :latitude, longitude = :longitude
+            WHERE farm_id = :farm_id
+            RETURNING farm_id
+        """)
+        row = db.execute(
+            query,
+            {
+                "farm_id": payload.farm_id,
+                "latitude": payload.latitude,
+                "longitude": payload.longitude,
+            },
+        ).fetchone()
+        if row is None:
+            db.rollback()
+            return error_response(message="Farm not found")
+        db.commit()
+        return success_response(
+            message="Farm location updated successfully",
+            data={
+                "farm_id": str(row[0]),
+                "latitude": payload.latitude,
+                "longitude": payload.longitude,
+            },
+        )
+    except Exception:
+        db.rollback()
+        logger.exception("Farm location update failed for farm_id=%r", payload.farm_id)
+        return error_response(message="Farm location update failed")
