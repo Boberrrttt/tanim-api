@@ -1,5 +1,6 @@
 import json
 import logging
+import math
 from datetime import datetime, timezone
 from typing import Any
 
@@ -78,6 +79,31 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
                 status_code=403,
             )
 
+        lat, lon = body.latitude, body.longitude
+        if lat is not None and lon is not None:
+            if not all(
+                isinstance(x, (int, float)) and math.isfinite(float(x)) for x in (lat, lon)
+            ):
+                raise error_response(
+                    message="latitude and longitude must be finite numbers when provided.",
+                    status_code=400,
+                )
+            db.execute(
+                text(
+                    """
+                    UPDATE farm
+                    SET latitude = :lat, longitude = :lon
+                    WHERE farm_id = :farm_id AND farmer_id = :farmer_id
+                    """
+                ),
+                {
+                    "lat": float(lat),
+                    "lon": float(lon),
+                    "farm_id": body.farm_id,
+                    "farmer_id": body.farmer_id,
+                },
+            )
+
         created_at = body.started_at or datetime.now(timezone.utc)
         created_at = _as_utc(created_at)
 
@@ -88,17 +114,17 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         )
         fert_json = json.dumps(body.fertilizer_recommendation)
         soil_json = json.dumps(body.soil_snapshot)
-        selected_crops = body.selected_crop.strip()
+        selected_crop_val = body.selected_crop.strip()
 
         upsert = text(
             """
             INSERT INTO farm_farming_session (
-                farm_id, farmer_id, selected_crops,
+                farm_id, farmer_id, selected_crop,
                 soil_snapshot, fertilizer_recommendation,
                 top_crop_probabilities, cycle_start_date, created_at
             )
             VALUES (
-                :farm_id, :farmer_id, :selected_crops,
+                :farm_id, :farmer_id, :selected_crop,
                 CAST(:soil_snapshot AS jsonb),
                 CAST(:fertilizer_recommendation AS jsonb),
                 CAST(:top_crop_probabilities AS jsonb),
@@ -106,7 +132,7 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
             )
             ON CONFLICT (farm_id) DO UPDATE SET
                 farmer_id = EXCLUDED.farmer_id,
-                selected_crops = EXCLUDED.selected_crops,
+                selected_crop = EXCLUDED.selected_crop,
                 soil_snapshot = EXCLUDED.soil_snapshot,
                 fertilizer_recommendation = EXCLUDED.fertilizer_recommendation,
                 top_crop_probabilities = EXCLUDED.top_crop_probabilities,
@@ -120,7 +146,7 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
             {
                 "farm_id": body.farm_id,
                 "farmer_id": body.farmer_id,
-                "selected_crops": selected_crops,
+                "selected_crop": selected_crop_val,
                 "soil_snapshot": soil_json,
                 "fertilizer_recommendation": fert_json,
                 "top_crop_probabilities": top_json,

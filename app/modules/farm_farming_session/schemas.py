@@ -36,3 +36,11 @@ class StartFarmingSessionBody(BaseModel):
         None,
         description="Optional client clock; maps to DB created_at when set",
     )
+    latitude: Optional[float] = Field(
+        None,
+        description="When both latitude and longitude are set, updates farm.latitude for this farm_id",
+    )
+    longitude: Optional[float] = Field(
+        None,
+        description="When both latitude and longitude are set, updates farm.longitude for this farm_id",
+    )
