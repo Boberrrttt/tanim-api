@@ -20,6 +20,10 @@ class StartFarmingSessionBody(BaseModel):
         ...,
         description="N, P, K, pH, salinity, temperature, moisture, etc.",
     )
+    features: Optional[List[float]] = Field(
+        None,
+        description="Optional ML feature vector [N,P,K,pH,temp,moisture,EC]; preferred source for soil_health_test row",
+    )
     fertilizer_recommendation: dict = Field(
         ...,
         description="Full successful ML /predict/fertilizer data object",

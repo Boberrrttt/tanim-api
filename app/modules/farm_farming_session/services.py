@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.modules.farm_farming_session.schemas import StartFarmingSessionBody
+from app.modules.soil_health_test.services import upsert_soil_health_for_calendar_day_no_commit
 from ...helpers.responses import error_response, success_response
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,65 @@ def _row_to_dict(row) -> dict[str, Any]:
         out.setdefault("selected_crop", crops)
 
     return out
+
+
+def _float_from_snapshot(snapshot: dict[str, Any], key: str, default: float = 0.0) -> float:
+    v = snapshot.get(key, default)
+    if isinstance(v, (int, float)) and math.isfinite(float(v)):
+        return float(v)
+    try:
+        x = float(v)
+        return x if math.isfinite(x) else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _soil_metrics_from_features_or_snapshot(
+    features: list[float] | None,
+    soil_snapshot: dict[str, Any],
+) -> dict[str, float]:
+    """
+    Prefer ML `features`: [0]=N, [1]=P, [2]=K, [3]=pH, [4]=temp, [5]=moisture, [6]=EC (salinity).
+    """
+    if isinstance(features, list) and len(features) >= 6:
+        try:
+            f = [float(x) for x in features[:7]]
+        except (TypeError, ValueError):
+            f = []
+        if len(f) >= 6 and all(math.isfinite(x) for x in f[:6]):
+            salinity = f[6] if len(f) > 6 and math.isfinite(f[6]) else 0.0
+            return {
+                "nitrogen": f[0],
+                "phosphorus": f[1],
+                "potassium": f[2],
+                "ph": f[3],
+                "temperature": f[4],
+                "moisture": f[5],
+                "salinity": salinity,
+            }
+    return {
+        "nitrogen": _float_from_snapshot(soil_snapshot, "nitrogen"),
+        "phosphorus": _float_from_snapshot(soil_snapshot, "phosphorus"),
+        "potassium": _float_from_snapshot(soil_snapshot, "potassium"),
+        "ph": _float_from_snapshot(soil_snapshot, "ph"),
+        "temperature": _float_from_snapshot(soil_snapshot, "temperature"),
+        "moisture": _float_from_snapshot(soil_snapshot, "moisture"),
+        "salinity": _float_from_snapshot(soil_snapshot, "salinity"),
+    }
+
+
+def _reference_time_for_soil_row(
+    soil_snapshot: dict[str, Any], fallback: datetime
+) -> datetime:
+    raw = soil_snapshot.get("received_at")
+    if isinstance(raw, str) and raw.strip():
+        s = raw.strip().replace("Z", "+00:00")
+        try:
+            dt = datetime.fromisoformat(s)
+            return _as_utc(dt)
+        except ValueError:
+            pass
+    return fallback
 
 
 async def start_farming_session(db: Session, body: StartFarmingSessionBody):
@@ -151,6 +211,24 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
                 "created_at": created_at,
             },
         )
+
+        snap = body.soil_snapshot if isinstance(body.soil_snapshot, dict) else {}
+        feats = body.features if isinstance(body.features, list) else None
+        metrics = _soil_metrics_from_features_or_snapshot(feats, snap)
+        ref_soil = _reference_time_for_soil_row(snap, created_at)
+        upsert_soil_health_for_calendar_day_no_commit(
+            db,
+            body.farm_id,
+            nitrogen=metrics["nitrogen"],
+            phosphorus=metrics["phosphorus"],
+            potassium=metrics["potassium"],
+            ph=metrics["ph"],
+            salinity=metrics["salinity"],
+            temperature=metrics["temperature"],
+            moisture=metrics["moisture"],
+            reference_time=ref_soil,
+        )
+
         db.commit()
 
         row = db.execute(
@@ -211,3 +289,30 @@ async def list_sessions_by_farmer(db: Session, farmer_id: str):
     except Exception as e:
         logger.exception("list_sessions_by_farmer failed: %s", e)
         raise error_response(message=f"Could not list farming sessions: {e!s}")
+
+
+async def delete_farming_session(db: Session, farm_id: str, farmer_id: str):
+    try:
+        if not _verify_farm_owner(db, farm_id, farmer_id):
+            raise error_response(
+                message="Farm not found or farmer_id does not own this farm.",
+                status_code=403,
+            )
+        result = db.execute(
+            text("DELETE FROM farm_farming_session WHERE farm_id = :farm_id"),
+            {"farm_id": farm_id},
+        )
+        db.commit()
+        removed = getattr(result, "rowcount", None)
+        deleted = bool(removed and removed > 0)
+        return success_response(
+            message="Farming session ended." if deleted else "No active farming session for this farm.",
+            data={"removed": deleted},
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.exception("delete_farming_session failed: %s", e)
+        raise error_response(message=f"Could not end farming session: {e!s}")

@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from .controllers import (
+    delete_farming_session_controller,
     get_farming_session_by_farm_controller,
     list_farming_sessions_by_farmer_controller,
     start_farming_session_controller,
@@ -22,3 +23,8 @@ router.get(
     "/{farm_id}",
     summary="Get farming session for one farm",
 )(get_farming_session_by_farm_controller)
+
+router.delete(
+    "/{farm_id}",
+    summary="Cancel farming: delete saved session for this farm (same farmer must own the farm)",
+)(delete_farming_session_controller)

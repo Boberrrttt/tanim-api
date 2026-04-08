@@ -285,3 +285,94 @@ async def get_by_farm_id(db: Session, farm_id: str):
         raise error_response(
             message=f"Failed to retrieve soil health tests: {str(e)}"
         )
+
+
+def upsert_soil_health_for_calendar_day_no_commit(
+    db: Session,
+    farm_id: str,
+    *,
+    nitrogen: float,
+    phosphorus: float,
+    potassium: float,
+    ph: float,
+    salinity: float,
+    temperature: float,
+    moisture: float,
+    reference_time: datetime,
+) -> None:
+    """
+    Insert or update `soil_health_test` for the UTC calendar day of `reference_time`.
+    Does not commit — caller owns the transaction (e.g. start farming).
+    """
+    reference_time = _as_utc(reference_time)
+    day_iso = reference_time.date().isoformat()
+    updated_at = datetime.now(timezone.utc)
+
+    find = text(
+        """
+        SELECT test_id FROM soil_health_test
+        WHERE farm_id = :farm_id
+        AND (created_at AT TIME ZONE 'UTC')::date = CAST(:day AS date)
+        ORDER BY created_at DESC
+        LIMIT 1
+        """
+    )
+    row = db.execute(find, {"farm_id": farm_id, "day": day_iso}).fetchone()
+
+    params = {
+        "nitrogen": nitrogen,
+        "phosphorus": phosphorus,
+        "potassium": potassium,
+        "ph": ph,
+        "salinity": salinity,
+        "temperature": temperature,
+        "moisture": moisture,
+    }
+
+    if row is not None:
+        tid = row.test_id
+        db.execute(
+            text(
+                """
+                UPDATE soil_health_test SET
+                    nitrogen = :nitrogen,
+                    phosphorus = :phosphorus,
+                    potassium = :potassium,
+                    ph = :ph,
+                    salinity = :salinity,
+                    temperature = :temperature,
+                    moisture = :moisture,
+                    updated_at = :updated_at
+                WHERE test_id = :test_id
+                """
+            ),
+            {
+                **params,
+                "updated_at": updated_at.isoformat(),
+                "test_id": tid,
+            },
+        )
+        return
+
+    test_id = str(uuid.uuid4())
+    db.execute(
+        text(
+            """
+            INSERT INTO soil_health_test (
+                test_id, farm_id, nitrogen, phosphorus, potassium, ph, salinity,
+                temperature, moisture, created_at, updated_at
+            )
+            VALUES (
+                :test_id, :farm_id, :nitrogen, :phosphorus, :potassium, :ph, :salinity,
+                :temperature, :moisture, :created_at, :updated_at
+            )
+            """
+        ),
+        {
+            **params,
+            "test_id": test_id,
+            "farm_id": farm_id,
+            "created_at": reference_time.isoformat(),
+            "updated_at": updated_at.isoformat(),
+        },
+    )
