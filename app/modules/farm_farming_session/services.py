@@ -116,7 +116,13 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         soil_json = json.dumps(body.soil_snapshot)
         selected_crop_val = body.selected_crop.strip()
 
-        upsert = text(
+        # No UNIQUE(farm_id) on many Supabase schemas (PK is farm_farming_session_id only),
+        # so ON CONFLICT (farm_id) fails — replace prior row(s) for this farm then insert.
+        db.execute(
+            text("DELETE FROM farm_farming_session WHERE farm_id = :farm_id"),
+            {"farm_id": body.farm_id},
+        )
+        insert_row = text(
             """
             INSERT INTO farm_farming_session (
                 farm_id, farmer_id, selected_crop,
@@ -130,19 +136,10 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
                 CAST(:top_crop_probabilities AS jsonb),
                 :cycle_start_date, :created_at
             )
-            ON CONFLICT (farm_id) DO UPDATE SET
-                farmer_id = EXCLUDED.farmer_id,
-                selected_crop = EXCLUDED.selected_crop,
-                soil_snapshot = EXCLUDED.soil_snapshot,
-                fertilizer_recommendation = EXCLUDED.fertilizer_recommendation,
-                top_crop_probabilities = EXCLUDED.top_crop_probabilities,
-                cycle_start_date = EXCLUDED.cycle_start_date,
-                created_at = EXCLUDED.created_at
             """
         )
-
         db.execute(
-            upsert,
+            insert_row,
             {
                 "farm_id": body.farm_id,
                 "farmer_id": body.farmer_id,
