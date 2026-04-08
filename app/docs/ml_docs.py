@@ -90,8 +90,7 @@ predict_example = Body(
 FERTILIZER_PREDICT_DOCS = {
     "summary": "Fertilizer recommendation (ML)",
     "description": (
-        "Proxies to the inference service `POST /predict/fertilizer` with soil NPK, pH, "
-        "temperature, EC, and moisture."
+        "Proxies to the inference service `POST /predict/fertilizer` with soil N, P, K, pH, and crop."
     ),
     "responses": {
         200: {
@@ -102,13 +101,33 @@ FERTILIZER_PREDICT_DOCS = {
                         "status": "success",
                         "message": "Fertilizer recommendation successful",
                         "data": {
-                            "prediction": "Urea",
-                            "probabilities": [
-                                {
-                                    "fertilizer_class": "Urea",
-                                    "probability": 0.42,
-                                }
-                            ],
+                            "crop": "Corn",
+                            "soil_ph": 6.5,
+                            "nitrogen": "High",
+                            "phosphorus": "High",
+                            "potassium": "Medium",
+                            "fertilizer_recommendation_rate": "60 - 20 - 45",
+                            "organic_fertilizer": "10 bags/ha",
+                            "option_1": {
+                                "first_application": [],
+                                "second_application": [],
+                            },
+                            "option_2": {
+                                "first_application": [],
+                                "second_application": [],
+                            },
+                            "mode_of_application": {
+                                "first_application": "",
+                                "second_application": "",
+                                "organic_fertilizer": "",
+                            },
+                            "farming_timeline": {
+                                "template_id": "CEREAL",
+                                "total_days": 105,
+                                "cycle_start_date": "2026-04-07",
+                                "planting_window_note": "",
+                                "phases": [],
+                            },
                         },
                     }
                 }
@@ -128,9 +147,8 @@ fertilizer_predict_example = Body(
                 "phosphorus": 30.0,
                 "potassium": 120.0,
                 "ph": 6.5,
-                "temperature": 28.0,
-                "ec": 1.2,
-                "moisture": 35.0,
+                "crop": "Corn",
+                "cycle_start_date": "2026-04-07",
             },
         }
     },

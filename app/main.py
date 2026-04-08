@@ -84,9 +84,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup():
-    register_routes(app)
+# Register at import time so routes exist on serverless (Vercel) even when lifespan
+# ordering differs; @app.on_event("startup") left only / and docs until startup ran.
+register_routes(app)
+
 
 @app.get("/")
 async def root():

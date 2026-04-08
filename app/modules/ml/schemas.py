@@ -4,6 +4,8 @@ from typing import List, Any, Optional
 class PredictionRequest(BaseModel):
     features: List[Any] = Field(..., description="Input features for prediction: [N, P, K, ph, temperature, humidity]")
     farm_id: Optional[str] = Field(None, description="When set, ML service persists a soil health test with this farm_id")
+    lat: Optional[float] = Field(None, description="Optional latitude; forwarded to ML /predict and stored in pending cache")
+    lng: Optional[float] = Field(None, description="Optional longitude; forwarded to ML /predict and stored in pending cache")
 
 
 class FertilizerPredictRequest(BaseModel):
@@ -11,10 +13,12 @@ class FertilizerPredictRequest(BaseModel):
     phosphorus: float = Field(..., description="Soil phosphorus (P)")
     potassium: float = Field(..., description="Soil potassium (K)")
     ph: float = Field(..., description="Soil pH")
-    temperature: float = Field(..., description="Temperature (°C)")
-    ec: float = Field(..., description="Electrical conductivity")
-    moisture: float = Field(..., description="Soil moisture (%)")
+    crop: str = Field(..., description="Crop name; forwarded to ML /predict/fertilizer")
     farm_id: Optional[str] = Field(None, description="Optional farm id (forwarded to ML service)")
+    cycle_start_date: Optional[str] = Field(
+        None,
+        description="ISO YYYY-MM-DD; echoed in ML farming_timeline (e.g. soil reading date)",
+    )
 
 class ProbabilityItem(BaseModel):
     crop_class: str = Field(..., description="Predicted crop class")
