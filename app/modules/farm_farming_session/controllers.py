@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from ...core.database import get_db
 from .schemas import StartFarmingSessionBody
 from .services import (
-    delete_farming_session,
+    end_farming_session,
     get_session_by_farm_id,
     list_sessions_by_farmer,
     start_farming_session,
@@ -37,4 +37,4 @@ async def delete_farming_session_controller(
     farmer_id: str = Query(..., description="Must match farm.farmer_id"),
     db: Session = Depends(get_db),
 ):
-    return await delete_farming_session(db, farm_id, farmer_id)
+    return await end_farming_session(db, farm_id, farmer_id)

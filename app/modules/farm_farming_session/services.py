@@ -45,7 +45,7 @@ def _row_to_dict(row) -> dict[str, Any]:
                     out[k] = v
             else:
                 out[k] = v
-        elif k in ("created_at", "started_at") and v is not None:
+        elif k in ("created_at", "started_at", "ended_at") and v is not None:
             out[k] = v.isoformat() if hasattr(v, "isoformat") else str(v)
         else:
             out[k] = v
@@ -176,11 +176,22 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         soil_json = json.dumps(body.soil_snapshot)
         selected_crop_val = body.selected_crop.strip()
 
-        # No UNIQUE(farm_id) on many Supabase schemas (PK is farm_farming_session_id only),
-        # so ON CONFLICT (farm_id) fails — replace prior row(s) for this farm then insert.
+        # End any still-active session for this farm (keeps history); then insert a new row.
         db.execute(
-            text("DELETE FROM farm_farming_session WHERE farm_id = :farm_id"),
-            {"farm_id": body.farm_id},
+            text(
+                """
+                UPDATE farm_farming_session
+                SET ended_at = :ended_at
+                WHERE farm_id = :farm_id
+                  AND farmer_id = :farmer_id
+                  AND ended_at IS NULL
+                """
+            ),
+            {
+                "farm_id": body.farm_id,
+                "farmer_id": body.farmer_id,
+                "ended_at": created_at,
+            },
         )
         insert_row = text(
             """
@@ -232,7 +243,14 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         db.commit()
 
         row = db.execute(
-            text("SELECT * FROM farm_farming_session WHERE farm_id = :farm_id LIMIT 1"),
+            text(
+                """
+                SELECT * FROM farm_farming_session
+                WHERE farm_id = :farm_id AND ended_at IS NULL
+                ORDER BY created_at DESC
+                LIMIT 1
+                """
+            ),
             {"farm_id": body.farm_id},
         ).fetchone()
         if not row:
@@ -253,7 +271,14 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
 
 async def get_session_by_farm_id(db: Session, farm_id: str):
     try:
-        q = text("SELECT * FROM farm_farming_session WHERE farm_id = :farm_id LIMIT 1")
+        q = text(
+            """
+            SELECT * FROM farm_farming_session
+            WHERE farm_id = :farm_id AND ended_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        )
         row = db.execute(q, {"farm_id": farm_id}).fetchone()
         if not row:
             return {
@@ -275,6 +300,7 @@ async def list_sessions_by_farmer(db: Session, farmer_id: str):
             FROM farm_farming_session s
             JOIN farm f ON f.farm_id = s.farm_id
             WHERE s.farmer_id = :farmer_id
+              AND s.ended_at IS NULL
             ORDER BY s.created_at DESC
             """
         )
@@ -291,28 +317,38 @@ async def list_sessions_by_farmer(db: Session, farmer_id: str):
         raise error_response(message=f"Could not list farming sessions: {e!s}")
 
 
-async def delete_farming_session(db: Session, farm_id: str, farmer_id: str):
+async def end_farming_session(db: Session, farm_id: str, farmer_id: str):
+    """Mark the active session ended; row stays in DB for history."""
     try:
         if not _verify_farm_owner(db, farm_id, farmer_id):
             raise error_response(
                 message="Farm not found or farmer_id does not own this farm.",
                 status_code=403,
             )
+        now = _as_utc(datetime.now(timezone.utc))
         result = db.execute(
-            text("DELETE FROM farm_farming_session WHERE farm_id = :farm_id"),
-            {"farm_id": farm_id},
+            text(
+                """
+                UPDATE farm_farming_session
+                SET ended_at = :ended_at
+                WHERE farm_id = :farm_id
+                  AND farmer_id = :farmer_id
+                  AND ended_at IS NULL
+                """
+            ),
+            {"farm_id": farm_id, "farmer_id": farmer_id, "ended_at": now},
         )
         db.commit()
-        removed = getattr(result, "rowcount", None)
-        deleted = bool(removed and removed > 0)
+        n = getattr(result, "rowcount", None)
+        ended = bool(n and n > 0)
         return success_response(
-            message="Farming session ended." if deleted else "No active farming session for this farm.",
-            data={"removed": deleted},
+            message="Farming session ended." if ended else "No active farming session for this farm.",
+            data={"ended": ended, "removed": ended},
         )
     except HTTPException:
         db.rollback()
         raise
     except Exception as e:
         db.rollback()
-        logger.exception("delete_farming_session failed: %s", e)
+        logger.exception("end_farming_session failed: %s", e)
         raise error_response(message=f"Could not end farming session: {e!s}")

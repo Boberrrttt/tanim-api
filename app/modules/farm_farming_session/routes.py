@@ -26,5 +26,5 @@ router.get(
 
 router.delete(
     "/{farm_id}",
-    summary="Cancel farming: delete saved session for this farm (same farmer must own the farm)",
+    summary="End farming: mark session ended (row kept); same farmer must own the farm",
 )(delete_farming_session_controller)
