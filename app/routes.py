@@ -1,6 +1,6 @@
 from .modules.auth.routes import router as auth_router
 from .modules.farm.routes import router as farm_router
-from .modules.farm_farming_session.routes import router as farm_farming_session_router
+from .modules.farming_session.routes import router as farming_session_router
 from .modules.farmer.routes import router as farmer_router
 from .modules.soil_health_test.routes import router as soil_health_test_router
 from .modules.crop_recommendation.routes import router as crop_recommendation_router
@@ -14,7 +14,7 @@ prefix = '/api/v1'
 def register_routes(app):
     app.include_router(auth_router, prefix=prefix)
     app.include_router(farm_router, prefix=prefix)
-    app.include_router(farm_farming_session_router, prefix=prefix)
+    app.include_router(farming_session_router, prefix=prefix)
     app.include_router(farmer_router, prefix=prefix)
     app.include_router(soil_health_test_router, prefix=prefix)
     app.include_router(crop_recommendation_router, prefix=prefix)

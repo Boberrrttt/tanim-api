@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.modules.farm_farming_session.schemas import StartFarmingSessionBody
+from app.modules.farming_session.schemas import StartFarmingSessionBody
 from app.modules.soil_health_test.services import upsert_soil_health_for_calendar_day_no_commit
 from ...helpers.responses import error_response, success_response
 
@@ -180,7 +180,7 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         db.execute(
             text(
                 """
-                UPDATE farm_farming_session
+                UPDATE farming_session
                 SET ended_at = :ended_at
                 WHERE farm_id = :farm_id
                   AND farmer_id = :farmer_id
@@ -195,7 +195,7 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         )
         insert_row = text(
             """
-            INSERT INTO farm_farming_session (
+            INSERT INTO farming_session (
                 farm_id, farmer_id, selected_crop,
                 soil_snapshot, fertilizer_recommendation,
                 top_crop_probabilities, cycle_start_date, created_at
@@ -245,7 +245,7 @@ async def start_farming_session(db: Session, body: StartFarmingSessionBody):
         row = db.execute(
             text(
                 """
-                SELECT * FROM farm_farming_session
+                SELECT * FROM farming_session
                 WHERE farm_id = :farm_id AND ended_at IS NULL
                 ORDER BY created_at DESC
                 LIMIT 1
@@ -273,7 +273,7 @@ async def get_session_by_farm_id(db: Session, farm_id: str):
     try:
         q = text(
             """
-            SELECT * FROM farm_farming_session
+            SELECT * FROM farming_session
             WHERE farm_id = :farm_id AND ended_at IS NULL
             ORDER BY created_at DESC
             LIMIT 1
@@ -297,7 +297,7 @@ async def list_sessions_by_farmer(db: Session, farmer_id: str):
         q = text(
             """
             SELECT s.*, f.farm_name
-            FROM farm_farming_session s
+            FROM farming_session s
             JOIN farm f ON f.farm_id = s.farm_id
             WHERE s.farmer_id = :farmer_id
               AND s.ended_at IS NULL
@@ -329,7 +329,7 @@ async def end_farming_session(db: Session, farm_id: str, farmer_id: str):
         result = db.execute(
             text(
                 """
-                UPDATE farm_farming_session
+                UPDATE farming_session
                 SET ended_at = :ended_at
                 WHERE farm_id = :farm_id
                   AND farmer_id = :farmer_id
