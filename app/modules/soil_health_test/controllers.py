@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from .schemas import CreateSoilHealthTest, UpdateSoilHealthTest
-from .services import create, get_by_farm_id, update_today
+from .services import create, get_by_farm_id, update_today, upsert_today_after_ml
 
 
 async def create_soil_health_test_controller(soil_health_test: CreateSoilHealthTest, db: Session = Depends(get_db)):
@@ -12,6 +12,10 @@ async def create_soil_health_test_controller(soil_health_test: CreateSoilHealthT
 
 async def update_soil_health_test_controller(payload: UpdateSoilHealthTest, db: Session = Depends(get_db)):
     return await update_today(db, payload)
+
+
+async def upsert_soil_health_today_controller(payload: UpdateSoilHealthTest, db: Session = Depends(get_db)):
+    return await upsert_today_after_ml(db, payload)
 
 
 async def get_soil_health_tests_by_farm_id_controller(farm_id: str, db: Session = Depends(get_db)):

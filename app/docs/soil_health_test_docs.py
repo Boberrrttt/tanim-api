@@ -102,6 +102,24 @@ UPDATE_SOIL_HEALTH_TEST_DOCS = {
     },
 }
 
+# Upsert today's row (ML app sync) — one row per farm per UTC day
+UPSERT_TODAY_SOIL_HEALTH_TEST_DOCS = {
+    "summary": "Upsert today's soil health (insert or update)",
+    "description": """
+    Creates or updates the `soil_health_test` row for the **current UTC date** for the given `farm_id`
+    (same as server-side `upsert_soil_health_for_calendar_day_no_commit`). If a row already exists
+    for today, metrics are updated and `updated_at` is set; if not, a new row is inserted.
+
+    Intended for the mobile app after a successful read from the model's `GET /pending/soil` cache
+    so readings are persisted on tanim-api without creating duplicate rows for the same day.
+    """,
+    "responses": {
+        200: {
+            "description": "Row created or updated",
+        },
+    },
+}
+
 # Get Soil Health Tests by Farm ID Documentation
 GET_SOIL_HEALTH_TESTS_BY_FARM_ID_DOCS = {
     "summary": "Get Soil Health Tests by Farm ID",

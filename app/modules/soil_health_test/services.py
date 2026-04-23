@@ -287,6 +287,92 @@ async def get_by_farm_id(db: Session, farm_id: str):
         )
 
 
+async def upsert_today_after_ml(db: Session, payload: UpdateSoilHealthTest):
+    """
+    Insert or update a single `soil_health_test` row for the current UTC calendar day.
+    Used by the mobile app after a successful `GET` from the model's pending cache.
+    Commits the transaction; returns the row like `update_today`.
+    """
+    try:
+        print(f"[soil_health_test] PUT /api/v1/test/upsert after_ml farm_id={payload.farm_id!r}")
+        reference_time = datetime.now(timezone.utc)
+        upsert_soil_health_for_calendar_day_no_commit(
+            db,
+            payload.farm_id,
+            nitrogen=payload.nitrogen,
+            phosphorus=payload.phosphorus,
+            potassium=payload.potassium,
+            ph=payload.ph,
+            salinity=payload.salinity,
+            temperature=payload.temperature,
+            moisture=payload.moisture,
+            reference_time=reference_time,
+        )
+        db.commit()
+
+        today = _utc_today_date()
+        read = text(
+            """
+            SELECT test_id, farm_id, nitrogen, phosphorus, potassium, ph, salinity,
+                temperature, moisture, created_at, updated_at
+            FROM soil_health_test
+            WHERE farm_id = :farm_id
+            AND (created_at AT TIME ZONE 'UTC')::date = CAST(:today AS date)
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        )
+        row = db.execute(
+            read, {"farm_id": payload.farm_id, "today": today.isoformat()}
+        ).fetchone()
+        if row is None:
+            raise error_response(
+                message="Upsert did not return a row for today (unexpected).",
+                status_code=500,
+            )
+
+        test = SoilHealthTest(
+            nitrogen=row.nitrogen,
+            phosphorus=row.phosphorus,
+            potassium=row.potassium,
+            ph=row.ph,
+            salinity=row.salinity,
+            temperature=row.temperature,
+            moisture=row.moisture,
+            farm_id=row.farm_id,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+        test_data = test.to_dict()
+        test_data["test_id"] = row.test_id
+
+        return success_response(
+            message="Soil health test saved for today",
+            data=test_data,
+        )
+    except HTTPException:
+        db.rollback()
+        raise
+    except IntegrityError as e:
+        db.rollback()
+        orig = str(e.orig) if getattr(e, "orig", None) else str(e)
+        print(
+            f"[soil_health_test] PUT /api/v1/test/upsert integrity_error farm_id={payload.farm_id!r} "
+            f"db_message={orig!r}"
+        )
+        raise error_response(
+            message="Could not save soil health test (database constraint).",
+            status_code=400,
+            details={"database": orig},
+        )
+    except Exception as e:
+        db.rollback()
+        print(
+            f"[soil_health_test] PUT /api/v1/test/upsert failed farm_id={payload.farm_id!r}: {e!r}"
+        )
+        raise error_response(message=f"Failed to save soil health test: {str(e)}")
+
+
 def upsert_soil_health_for_calendar_day_no_commit(
     db: Session,
     farm_id: str,
